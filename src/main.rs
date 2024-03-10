@@ -1,38 +1,63 @@
 use raylib::prelude::*;
-use std::ffi::CStr;
 
-macro_rules! cstr {
-    ($s:literal) => {{
-        let s = CStr::from_bytes_with_nul(concat!($s, "\0").as_bytes());
-        match s {
-            Ok(s) => s,
-            Err(_) => panic!("cstr cannot contain null bytes"),
-        }
-    }};
+mod card;
+
+const CARD_SIZE: i32 = 100;
+const GAP: i32 = 5;
+
+fn get_count() -> i32 {
+    use std::io::{stdin, stdout, Write};
+
+    let mut s = String::new();
+
+    print!("Count: ");
+    let _ = stdout().flush();
+
+    stdin().read_line(&mut s).expect("Wrong string.");
+
+    s.trim().parse::<i32>().unwrap()
 }
+fn init_cards(cards: &mut Vec<card::Card>, count: i32) {
+    let mut x = 0.0;
+    let mut y = 0.0;
 
-fn draw_grid(mut x: f32, mut y: f32, d: &mut RaylibDrawHandle<'_>) {
-    for _ in 1..5 {
-        for _ in 1..5 {
-            d.gui_button(Rectangle::new(x, y, 100.0, 100.0), Some(cstr!("BTN")));
+    for cy in 0..count {
+        for cx in 0..count {
+            cards.push(card::Card::new(x, y, CARD_SIZE as f32, CARD_SIZE as f32));
             x += 100.0;
+
+            if cx != count - 1 {
+                x += GAP as f32;
+            }
         }
         x = 0.0;
         y += 100.0;
+
+        if cy != count - 1 {
+            y += GAP as f32;
+        }
     }
 }
-
 fn main() {
-    let (mut rl, thread) = raylib::init().size(400, 400).title("card-flip").build();
+    let count = get_count();
+    let window_size = CARD_SIZE * count + GAP * (count - 1);
+
+    let (mut rl, thread) = raylib::init()
+        .size(window_size, window_size)
+        .title("card-flip")
+        .build();
+
+    let mut cards = Vec::<card::Card>::with_capacity((count * count) as usize);
+    init_cards(&mut cards, count);
 
     while !rl.window_should_close() {
         let mut d = rl.begin_drawing(&thread);
         {
-            let x: f32 = 0.0;
-            let y: f32 = 0.0;
-
             d.clear_background(Color::WHITE);
-            draw_grid(x, y, &mut d);
+
+            for c in &mut cards {
+                c.draw(&mut d);
+            }
         }
     }
 }
